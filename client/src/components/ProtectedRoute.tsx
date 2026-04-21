@@ -1,17 +1,24 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Spinner } from '@/components/ui/spinner';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute() {
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner />
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--bg)',
+      }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '50%',
+          border: '2px solid transparent',
+          borderTopColor: 'var(--primary)', borderRightColor: 'var(--primary)',
+          animation: 'spin 0.75s linear infinite',
+        }} />
       </div>
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/auth/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/auth/login" replace />;
 }
