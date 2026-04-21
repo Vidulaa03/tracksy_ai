@@ -1,129 +1,130 @@
 import { useState } from 'react';
 import {
-  DndContext,
-  DragEndEvent,
-  DragOverEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
+  DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent,
+  PointerSensor, useSensor, useSensors, closestCenter,
 } from '@dnd-kit/core';
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
+  SortableContext, verticalListSortingStrategy, useSortable,
 } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { JobApplication, JobStatus, JOB_STATUSES, getStatusConfig } from '@/types';
-import { GripVertical, Pencil, Trash2, Building2, Calendar, ExternalLink } from 'lucide-react';
+import {
+  JobApplication, JobStatus, JOB_STATUSES, getStatusConfig,
+} from '../types';
+import {
+  GripVertical, Pencil, Trash2, Building2, Calendar, ExternalLink,
+} from 'lucide-react';
 
-// ── Card ──────────────────────────────────────────────────────────────────
-
-interface CardProps {
-  app: JobApplication;
-  onEdit: (app: JobApplication) => void;
-  onDelete: (id: string) => void;
-  isDragOverlay?: boolean;
+/* ─────────────────────── helpers ─────────────────────────────────────────── */
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function AppCard({ app, onEdit, onDelete, isDragOverlay }: CardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: app._id,
-    data: { status: app.status, app },
-  });
+/* ─────────────────────── AppCard ─────────────────────────────────────────── */
+interface CardProps {
+  app: JobApplication;
+  onEdit:   (a: JobApplication) => void;
+  onDelete: (id: string) => void;
+  overlay?: boolean;
+}
 
+function AppCard({ app, onEdit, onDelete, overlay = false }: CardProps) {
   const sc = getStatusConfig(app.status);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.35 : 1,
-  };
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: app._id, data: { status: app.status } });
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }}
+    >
       <div
-        className="group rounded-xl p-3.5 transition-all duration-150 animate-fade-in"
+        className="kcard"
         style={{
-          background: isDragOverlay ? 'var(--surface-3)' : 'var(--surface-2)',
-          border: `1px solid ${isDragOverlay ? 'rgba(99,102,241,0.4)' : 'var(--border-strong)'}`,
-          boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.6)' : 'var(--shadow-sm)',
-          transform: isDragOverlay ? 'rotate(2deg)' : undefined,
-          cursor: 'default',
+          background:    overlay ? 'var(--surface-3)' : 'var(--surface-2)',
+          border:        `1px solid ${overlay ? 'rgba(99,102,241,0.5)' : 'var(--border-strong)'}`,
+          borderRadius:  '12px',
+          padding:       '14px',
+          boxShadow:     overlay ? '0 16px 48px rgba(0,0,0,0.7)' : 'var(--shadow-sm)',
+          transform:     overlay ? 'rotate(2deg) scale(1.02)' : undefined,
+          cursor:        'default',
+          position:      'relative',
+          transition:    'border-color 0.15s, box-shadow 0.15s',
         }}
       >
-        {/* Status badge + drag grip */}
-        <div className="flex items-center justify-between mb-2">
-          <span
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: `${sc.hex}18`, color: sc.hex }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.hex }} />
+        {/* status badge + drag grip */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '99px',
+            background: `${sc.hex}18`, color: sc.hex,
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: sc.hex }} />
             {sc.label}
           </span>
           <button
-            {...attributes}
-            {...listeners}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity cursor-grab active:cursor-grabbing"
-            style={{ color: 'var(--text-muted)', touchAction: 'none' }}
+            {...attributes} {...listeners}
+            className="drag-handle"
+            style={{
+              opacity: 0, background: 'none', border: 'none', cursor: 'grab',
+              padding: '4px', color: 'var(--text-muted)', borderRadius: '4px',
+              touchAction: 'none', display: 'flex', transition: 'opacity 0.15s',
+            }}
           >
             <GripVertical size={14} />
           </button>
         </div>
 
-        {/* Role */}
-        <p className="font-semibold text-sm leading-snug mb-0.5" style={{ color: 'var(--text)' }}>
+        {/* role */}
+        <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text)', lineHeight: 1.3, marginBottom: '4px' }}>
           {app.position}
         </p>
 
-        {/* Company */}
-        <div className="flex items-center gap-1 mb-3">
-          <Building2 size={11} style={{ color: 'var(--text-muted)' }} />
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{app.companyName}</span>
+        {/* company */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
+          <Building2 size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{app.companyName}</span>
         </div>
 
-        {/* Notes preview */}
+        {/* notes preview */}
         {app.notes && (
-          <p
-            className="text-xs line-clamp-2 mb-3 pb-3"
-            style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}
-          >
+          <p style={{
+            fontSize: '11px', color: 'var(--text-muted)',
+            display: '-webkit-box', WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            marginBottom: '10px', paddingBottom: '10px',
+            borderBottom: '1px solid var(--border)',
+          }}>
             {app.notes}
           </p>
         )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+        {/* footer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Calendar size={11} style={{ color: 'var(--text-muted)' }} />
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {new Date(app.appliedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{fmtDate(app.appliedDate)}</span>
           </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="card-actions" style={{ display: 'flex', gap: '2px', opacity: 0, transition: 'opacity 0.15s' }}>
             {app.jobDescriptionLink && (
               <a
-                href={app.jobDescriptionLink} target="_blank" rel="noopener noreferrer"
+                href={app.jobDescriptionLink} target="_blank" rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ padding: '5px', borderRadius: '6px', color: 'var(--text-muted)', display: 'flex' }}
               >
                 <ExternalLink size={12} />
               </a>
             )}
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(app); }}
-              className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ padding: '5px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
             >
               <Pencil size={12} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(app._id); }}
-              className="p-1.5 rounded-md hover:bg-red-500/15 transition-colors"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ padding: '5px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = '#f87171')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
             >
@@ -132,66 +133,66 @@ function AppCard({ app, onEdit, onDelete, isDragOverlay }: CardProps) {
           </div>
         </div>
       </div>
+
+      {/* scoped hover styles */}
+      <style>{`
+        .kcard:hover .drag-handle  { opacity: 1 !important; }
+        .kcard:hover .card-actions { opacity: 1 !important; }
+      `}</style>
     </div>
   );
 }
 
-// ── Column ─────────────────────────────────────────────────────────────────
-
-import { useDroppable } from '@dnd-kit/core';
-
-interface ColumnProps {
-  status: typeof JOB_STATUSES[number];
-  apps: JobApplication[];
-  onEdit: (app: JobApplication) => void;
+/* ─────────────────────── KanbanColumn ────────────────────────────────────── */
+interface ColProps {
+  status:   typeof JOB_STATUSES[number];
+  apps:     JobApplication[];
+  onEdit:   (a: JobApplication) => void;
   onDelete: (id: string) => void;
 }
 
-function KanbanColumn({ status, apps, onEdit, onDelete }: ColumnProps) {
+function KanbanColumn({ status, apps, onEdit, onDelete }: ColProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
 
   return (
-    <div className="flex flex-col flex-shrink-0" style={{ width: '264px', minWidth: '264px' }}>
-      {/* Column header */}
-      <div
-        className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-2.5"
-        style={{
-          background: `${status.hex}12`,
-          border: `1px solid ${status.hex}28`,
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: status.hex }} />
-          <span className="text-sm font-semibold" style={{ color: status.hex }}>
-            {status.label}
-          </span>
+    <div style={{ width: '272px', minWidth: '272px', display: 'flex', flexDirection: 'column' }}>
+      {/* column header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 12px', borderRadius: '10px', marginBottom: '10px',
+        background: `${status.hex}12`, border: `1px solid ${status.hex}28`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: status.hex, display: 'block' }} />
+          <span style={{ fontSize: '13px', fontWeight: 700, color: status.hex }}>{status.label}</span>
         </div>
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ background: `${status.hex}20`, color: status.hex }}
-        >
+        <span style={{
+          fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '99px',
+          background: `${status.hex}22`, color: status.hex,
+        }}>
           {apps.length}
         </span>
       </div>
 
-      {/* Drop zone */}
+      {/* droppable zone */}
       <div
         ref={setNodeRef}
-        className="flex-1 p-2 rounded-xl space-y-2 transition-all duration-150"
         style={{
-          minHeight: '200px',
-          background: isOver ? `${status.hex}08` : 'rgba(255,255,255,0.012)',
-          border: `2px dashed ${isOver ? status.hex + '55' : 'transparent'}`,
+          flex: 1, minHeight: '200px', padding: '6px', borderRadius: '10px',
+          display: 'flex', flexDirection: 'column', gap: '8px',
+          background: isOver ? `${status.hex}09` : 'rgba(255,255,255,0.012)',
+          border:     `2px dashed ${isOver ? status.hex + '55' : 'transparent'}`,
+          transition: 'all 0.15s',
         }}
       >
         <SortableContext items={apps.map((a) => a._id)} strategy={verticalListSortingStrategy}>
           {apps.length === 0 ? (
-            <div
-              className="h-28 flex flex-col items-center justify-center gap-1.5 rounded-lg"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              <span className="text-xl opacity-25">○</span>
-              <span className="text-xs">Drop here</span>
+            <div style={{
+              height: '100px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--text-muted)',
+            }}>
+              <span style={{ fontSize: '20px', opacity: 0.25 }}>○</span>
+              <span style={{ fontSize: '11px' }}>Drop here</span>
             </div>
           ) : (
             apps.map((app) => (
@@ -204,54 +205,56 @@ function KanbanColumn({ status, apps, onEdit, onDelete }: ColumnProps) {
   );
 }
 
-// ── Board ──────────────────────────────────────────────────────────────────
-
-interface KanbanBoardProps {
-  applications: JobApplication[];
-  onStatusChange: (id: string, status: JobStatus) => Promise<void>;
-  onEdit: (app: JobApplication) => void;
-  onDelete: (id: string) => void;
+/* ─────────────────────── KanbanBoard (main export) ──────────────────────── */
+interface BoardProps {
+  applications:   JobApplication[];
+  onStatusChange: (id: string, newStatus: JobStatus) => Promise<void>;
+  onEdit:         (app: JobApplication) => void;
+  onDelete:       (id: string) => void;
 }
 
-export default function KanbanBoard({ applications, onStatusChange, onEdit, onDelete }: KanbanBoardProps) {
-  const [localApps, setLocalApps] = useState<JobApplication[]>(applications);
-  const [activeApp, setActiveApp] = useState<JobApplication | null>(null);
+export default function KanbanBoard({ applications, onStatusChange, onEdit, onDelete }: BoardProps) {
+  const [local, setLocal]   = useState<JobApplication[]>(applications);
+  const [active, setActive] = useState<JobApplication | null>(null);
 
-  // Sync when parent updates
+  // keep local state in sync when parent refreshes
   const parentKey = applications.map((a) => a._id + a.status).join();
-  const localKey = localApps.map((a) => a._id + a.status).join();
-  if (parentKey !== localKey) setLocalApps(applications);
+  const localKey  = local.map((a) => a._id + a.status).join();
+  if (parentKey !== localKey) setLocal(applications);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  function handleDragStart({ active }: DragStartEvent) {
-    setActiveApp(localApps.find((a) => a._id === active.id) ?? null);
+  function handleDragStart({ active: a }: DragStartEvent) {
+    setActive(local.find((x) => x._id === a.id) ?? null);
   }
 
-  function handleDragOver({ active, over }: DragOverEvent) {
+  function handleDragOver({ active: a, over }: DragOverEvent) {
     if (!over) return;
-    const overId = over.id as string;
-    const isColumn = JOB_STATUSES.some((s) => s.value === overId);
-    const newStatus: JobStatus = isColumn
+    const overId = String(over.id);
+    // over.id is either a column (status value) or another card's _id
+    const isColumn  = JOB_STATUSES.some((s) => s.value === overId);
+    const newStatus = isColumn
       ? (overId as JobStatus)
-      : (localApps.find((a) => a._id === overId)?.status ?? 'applied');
+      : (local.find((x) => x._id === overId)?.status ?? 'applied');
 
-    setLocalApps((prev) =>
-      prev.map((a) => (a._id === active.id && a.status !== newStatus ? { ...a, status: newStatus } : a))
+    setLocal((prev) =>
+      prev.map((x) =>
+        x._id === a.id && x.status !== newStatus ? { ...x, status: newStatus } : x
+      )
     );
   }
 
-  async function handleDragEnd({ active }: DragEndEvent) {
-    setActiveApp(null);
-    const moved = localApps.find((a) => a._id === active.id);
-    const original = applications.find((a) => a._id === active.id);
+  async function handleDragEnd({ active: a }: DragEndEvent) {
+    setActive(null);
+    const moved    = local.find((x) => x._id === a.id);
+    const original = applications.find((x) => x._id === a.id);
     if (moved && original && moved.status !== original.status) {
       try {
-        await onStatusChange(active.id as string, moved.status);
+        await onStatusChange(String(a.id), moved.status);
       } catch {
-        setLocalApps(applications); // revert on error
+        setLocal(applications); // revert optimistic update on failure
       }
     }
   }
@@ -264,12 +267,12 @@ export default function KanbanBoard({ applications, onStatusChange, onEdit, onDe
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '520px' }}>
-        {JOB_STATUSES.map((status) => (
+      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', minHeight: '520px' }}>
+        {JOB_STATUSES.map((s) => (
           <KanbanColumn
-            key={status.value}
-            status={status}
-            apps={localApps.filter((a) => a.status === status.value)}
+            key={s.value}
+            status={s}
+            apps={local.filter((a) => a.status === s.value)}
             onEdit={onEdit}
             onDelete={onDelete}
           />
@@ -277,9 +280,10 @@ export default function KanbanBoard({ applications, onStatusChange, onEdit, onDe
       </div>
 
       <DragOverlay>
-        {activeApp ? (
-          <AppCard app={activeApp} onEdit={() => {}} onDelete={() => {}} isDragOverlay />
-        ) : null}
+        {active
+          ? <AppCard app={active} onEdit={() => {}} onDelete={() => {}} overlay />
+          : null
+        }
       </DragOverlay>
     </DndContext>
   );
