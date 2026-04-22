@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracksy</title>
+  <style>
+    :root {
+      --bg:             #080c14;
+      --surface:        #0f1623;
+      --surface-2:      #161e2e;
+      --surface-3:      #1c2638;
+      --border:         rgba(255,255,255,0.08);
+      --primary:        #6366f1;
+      --primary-hover:  #4f46e5;
+      --primary-muted:  rgba(99,102,241,0.12);
+      --primary-border: rgba(99,102,241,0.30);
+      --text:           #f0f4ff;
+      --text-secondary: #8892a4;
+      --text-muted:     #4b5563;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { width: 360px; background: var(--bg); color: var(--text); font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 14px; }
+
+    .header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 18px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { width: 28px; height: 28px; border-radius: 7px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo svg { color: white; }
+    .logo-text { font-weight: 700; font-size: 15px; }
+
+    .body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* auth screen */
+    #auth-screen p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+    .input-group { display: flex; flex-direction: column; gap: 5px; }
+    .input-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .input-group input {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); padding: 8px 11px; font-size: 13px; outline: none;
+      transition: border-color 0.15s;
+    }
+    .input-group input:focus { border-color: var(--primary); }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 9px 16px; border-radius: 9px; border: none; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: all 0.15s; width: 100%;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--surface-3); color: var(--text); }
+    .btn-success { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+
+    /* saved form */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field select, .field textarea {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); padding: 8px 11px; font-size: 13px; outline: none;
+      transition: border-color 0.15s; font-family: inherit;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); }
+    .field select option { background: var(--surface-2); }
+
+    /* status pills */
+    .status-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+    .status-pill {
+      padding: 4px 10px; border-radius: 7px; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all 0.12s; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--text-secondary);
+    }
+    .status-pill.active { border-color: var(--primary); background: var(--primary-muted); color: var(--primary); }
+
+    .error { padding: 9px 12px; border-radius: 8px; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #f87171; font-size: 12px; }
+    .success { padding: 12px; border-radius: 10px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: #34d399; font-size: 13px; font-weight: 600; text-align: center; }
+    .divider { height: 1px; background: var(--border); }
+    .user-info { font-size: 12px; color: var(--text-muted); }
+    .user-info span { color: var(--text-secondary); font-weight: 500; }
+    .spinning { animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    </div>
+    <span class="logo-text">Tracksy</span>
+    <button id="logout-btn" title="Sign out" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);display:none;font-size:12px;">
+      Sign out
+    </button>
+  </div>
+
+  <!-- Auth screen -->
+  <div id="auth-screen" class="body">
+    <p>Sign in with your Tracksy API token to save jobs directly from LinkedIn and Indeed.</p>
+    <div class="input-group">
+      <label>Tracksy Server URL</label>
+      <input id="server-url" type="url" placeholder="http://localhost:3000" />
+    </div>
+    <div class="input-group">
+      <label>Auth Token</label>
+      <input id="auth-token" type="password" placeholder="Paste your JWT token" />
+    </div>
+    <p style="font-size:11px;color:var(--text-muted)">Find your token in localStorage → authToken after logging in to Tracksy.</p>
+    <button class="btn btn-primary" id="save-token-btn">Connect to Tracksy</button>
+    <div id="auth-error" class="error" style="display:none"></div>
+  </div>
+
+  <!-- Main screen -->
+  <div id="main-screen" class="body" style="display:none">
+    <div class="user-info">Connected to <span id="server-display"></span></div>
+
+    <!-- detected job info -->
+    <div id="detected-info" style="display:none">
+      <div style="padding:10px 12px;background:var(--primary-muted);border:1px solid var(--primary-border);border-radius:10px;font-size:12px;color:var(--primary);font-weight:600;">
+        ✓ Job detected on this page
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Company</label>
+      <input id="company" type="text" placeholder="Acme Inc" />
+    </div>
+    <div class="field">
+      <label>Position</label>
+      <input id="position" type="text" placeholder="Senior Engineer" />
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <div class="status-pills" id="status-pills">
+        <div class="status-pill active" data-status="applied">Applied</div>
+        <div class="status-pill" data-status="phone_screen">Phone Screen</div>
+        <div class="status-pill" data-status="interview">Interview</div>
+        <div class="status-pill" data-status="offer">Offer</div>
+        <div class="status-pill" data-status="rejected">Rejected</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="notes" rows="2" placeholder="Referral, salary info, etc."></textarea>
+    </div>
+
+    <div id="save-error" class="error" style="display:none"></div>
+    <div id="save-success" class="success" style="display:none">✓ Application saved to Tracksy!</div>
+
+    <button class="btn btn-primary" id="save-btn">Save to Tracksy</button>
+    <div class="divider"></div>
+    <a id="open-tracksy" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none;text-align:center;">
+      Open Tracksy Dashboard →
+    </a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
